@@ -1,24 +1,26 @@
 export default async function handler(req, res) {
-  const API_URL = "https://insights.smartadserverapis.com/report-async";
-  const token = req.headers.authorization;
+  const targetUrl = process.env.TARGET_URL;
 
-  if (!token) {
-    return res.status(401).json({ error: "Missing Authorization header" });
+  if (!targetUrl) {
+    return res.status(500).json({ error: 'Missing TARGET_URL environment variable' });
   }
 
   try {
-    const response = await fetch(API_URL, {
-      method: "POST",
+    // Reenvía el request recibido al servidor de Equativ
+    const response = await fetch(targetUrl, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Authorization: token,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': req.headers['authorization'], // <-- importante
       },
-      body: JSON.stringify(req.body),
+      body: req.body, // reenvía el cuerpo recibido
     });
 
-    const data = await response.json();
-    res.status(response.status).json(data);
+    const data = await response.text();
+
+    res.status(response.status).send(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: error.message || 'fetch failed' });
   }
 }
